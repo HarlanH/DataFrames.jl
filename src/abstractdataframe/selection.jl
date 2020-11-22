@@ -55,9 +55,15 @@ const TRANSFORMATION_COMMON_RULES =
     5. a `nrow` or `nrow => target_cols` form which efficiently computes the number of rows
        in a group; without `target_cols` the new column is called `:nrow`, otherwise
        it must be single name (as a `Symbol` or a string).
-    6. vectors or matrices containing transformations specified by the `Pair` syntax
+    6. a `proprow` or `proprow => target_cols` form which efficiently computes the proportion
+       of rows in a group; without `target_cols` the new column is called `:proprow`,
+       otherwise it must be single name (as a `Symbol` or a string).
+    7. a `rownumber` or `rownumber => target_cols` form which creates a column containing
+       `collect(axes(sdf, 1))` vector per group; without `target_cols` the new column
+       is called `:rownumber`, otherwise it must be single name (as a `Symbol` or a string).
+    8. vectors or matrices containing transformations specified by the `Pair` syntax
        described in points 2 to 5
-    8. a function which will be called with a `SubDataFrame` corresponding to each group;
+    9. a function which will be called with a `SubDataFrame` corresponding to each group;
        this form should be avoided due to its poor performance unless a very large
        number of columns are processed (in which case `SubDataFrame` avoids excessive
        compilation)
@@ -190,6 +196,103 @@ normalize_selection(idx::AbstractIndex, sel::Pair{typeof(nrow), <:AbstractString
 normalize_selection(idx::AbstractIndex, sel::typeof(nrow), renamecols::Bool) =
     normalize_selection(idx, nrow => :nrow, renamecols)
 
+"""
+    proprow
+
+A function allowed to be used only in `select`, `select!`, `transform`,
+`transform!`, and `combine` to specify a transformation calculating row
+proportion.
+
+The allowed transformation form is `proprow` or `proprow => target_col` which
+efficiently computes the proportion of rows in a group; without `target_col`
+the new column is called `:proprow`, otherwise it must be single name (as a
+`Symbol` or a string).
+
+# Examples
+
+```
+julia> df = DataFrame(id=[1, 1, 2])
+3×1 DataFrame
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     1
+   2 │     1
+   3 │     2
+
+julia> combine(df, proprow)
+1×1 DataFrame
+ Row │ proprow
+     │ Float64
+─────┼─────────
+   1 │     1.0
+
+julia> transform(df, proprow)
+3×2 DataFrame
+ Row │ id     proprow
+     │ Int64  Float64
+─────┼────────────────
+   1 │     1      1.0
+   2 │     1      1.0
+   3 │     2      1.0
+
+julia> gdf = groupby(df, :id)
+GroupedDataFrame with 2 groups based on key: id
+First Group (2 rows): id = 1
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     1
+   2 │     1
+⋮
+Last Group (1 row): id = 2
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     2
+
+julia> combine(gdf, proprow)
+2×2 DataFrame
+ Row │ id     proprow
+     │ Int64  Float64
+─────┼─────────────────
+   1 │     1  0.666667
+   2 │     2  0.333333
+
+julia> transform(gdf, proprow)
+3×2 DataFrame
+ Row │ id     proprow
+     │ Int64  Float64
+─────┼─────────────────
+   1 │     1  0.666667
+   2 │     1  0.666667
+   3 │     2  0.333333
+```
+"""
+function proprow end
+
+_proprow() = 0
+_proprow(x::AbstractVector) = length(x)
+
+normalize_selection(idx::AbstractIndex, sel::Pair{typeof(proprow), Symbol},
+                    renamecols::Bool) =
+    length(idx) == 0 ? (Int[] => _proprow => last(sel)) : (1 => _proprow => last(sel))
+normalize_selection(idx::AbstractIndex, sel::Pair{typeof(proprow), <:AbstractString},
+                    renamecols::Bool) =
+    normalize_selection(idx, first(sel) => Symbol(last(sel)), renamecols)
+normalize_selection(idx::AbstractIndex, sel::typeof(proprow), renamecols::Bool) =
+    normalize_selection(idx, proprow => :proprow, renamecols)
+
+normalize_selection(idx::AbstractIndex, sel::Pair{typeof(rownumber), Symbol},
+                    renamecols::Bool) =
+    length(idx) == 0 ? (Int[] => (x -> Base.OneTo(0)) => last(sel)) :
+                       (1 => (x -> Base.OneTo(length(x))) => last(sel))
+normalize_selection(idx::AbstractIndex, sel::Pair{typeof(rownumber), <:AbstractString},
+                    renamecols::Bool) =
+    normalize_selection(idx, first(sel) => Symbol(last(sel)), renamecols)
+normalize_selection(idx::AbstractIndex, sel::typeof(rownumber), renamecols::Bool) =
+    normalize_selection(idx, rownumber => :rownumber, renamecols)
+
 function normalize_selection(idx::AbstractIndex, sel::ColumnIndex, renamecols::Bool)
     c = idx[sel]
     return c => identity => _names(idx)[c]
@@ -321,6 +424,18 @@ end
 
 _transformation_helper(df::AbstractDataFrame, col_idx::Nothing, fun) = fun(df)
 _transformation_helper(df::AbstractDataFrame, col_idx::Int, fun) = fun(df[!, col_idx])
+
+function _transformation_helper(df::AbstractDataFrame, col_idx::Int, fun::typeof(_proprow))
+    @assert col_idx == 1
+    nr = nrow(df)
+    return nr / nr
+end
+
+function _transformation_helper(df::AbstractDataFrame, col_idx::AbstractVector{Int}, fun::typeof(_proprow))
+    @assert isempty(col_idx) && isempty(df)
+    nr = nrow(df)
+    return nr / nr
+end
 
 _empty_astable_helper(fun, len) = [fun(NamedTuple()) for _ in 1:len]
 

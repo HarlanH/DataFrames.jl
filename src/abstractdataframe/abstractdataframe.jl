@@ -336,6 +336,70 @@ Base.lastindex(df::AbstractDataFrame, i::Integer) = last(axes(df, i))
 Base.axes(df::AbstractDataFrame, i::Integer) = Base.OneTo(size(df, i))
 
 """
+    rownumber(df::AbstractDataFrame)
+
+Return `axes(df, 1)`.
+
+Additionally the `rownumber` function is allowed in `select`, `select!`,
+`transform`, `transform!`, and `combine`, with a non-standard syntax. The
+additional transformation form rule is `rownumber` or `rownumber => target_col`
+which creates a column containing `collect(axes(df, 1))` vector; without
+`target_col` the new column is called `:rownumber`, otherwise it must be single
+name (as a `Symbol` or a string).
+
+
+# Examples
+
+```
+julia> df = DataFrame(id=[1, 1, 2])
+3×1 DataFrame
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     1
+   2 │     1
+   3 │     2
+
+julia> rownumber(df)
+Base.OneTo(3)
+
+julia> combine(df, rownumber)
+3×1 DataFrame
+ Row │ rownumber
+     │ Int64
+─────┼───────────
+   1 │         1
+   2 │         2
+   3 │         3
+
+julia> gdf = groupby(df, :id)
+GroupedDataFrame with 2 groups based on key: id
+First Group (2 rows): id = 1
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     1
+   2 │     1
+⋮
+Last Group (1 row): id = 2
+ Row │ id
+     │ Int64
+─────┼───────
+   1 │     2
+
+julia> combine(gdf, rownumber)
+3×2 DataFrame
+ Row │ id     rownumber
+     │ Int64  Int64
+─────┼──────────────────
+   1 │     1          1
+   2 │     1          2
+   3 │     2          1
+```
+"""
+rownumber(df::AbstractDataFrame) = axes(df, 1)
+
+"""
     ndims(::AbstractDataFrame)
     ndims(::Type{<:AbstractDataFrame})
 
@@ -1741,21 +1805,50 @@ Return the number of rows or columns in an `AbstractDataFrame` `df`.
 
 See also [`size`](@ref).
 
+Additionally the `nrow` function is allowed in `select`, `select!`, `transform`,
+`transform!`, and `combine`, with a non-standard syntax. The additional
+transformation form rule is `nrow` or `nrow => target_col` which efficiently
+computes the number of rows in a group; without `target_col` the new column
+is called `:nrow`, otherwise it must be single name (as a `Symbol` or a
+string).
+
+See also [`proprow`](@ref).
+
 **Examples**
 
 ```jldoctest
-julia> df = DataFrame(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10));
+julia> df = DataFrame(id = 1:6, y = repeat(["a", "b", "c"], 2))
 
 julia> size(df)
-(10, 3)
+(6, 2)
 
 julia> nrow(df)
-10
+6
 
 julia> ncol(df)
-3
-```
+2
 
+julia> transform(df, nrow)
+6×3 DataFrame
+ Row │ id     y       nrow
+     │ Int64  String  Int64
+─────┼──────────────────────
+   1 │     1  a           6
+   2 │     2  b           6
+   3 │     3  c           6
+   4 │     4  a           6
+   5 │     5  b           6
+   6 │     6  c           6
+
+julia> combine(groupby(df, :y), nrow)
+3×2 DataFrame
+ Row │ y       nrow
+     │ String  Int64
+─────┼───────────────
+   1 │ a           2
+   2 │ b           2
+   3 │ c           2
+```
 """
 (nrow, ncol)
 

@@ -3224,4 +3224,70 @@ end
     end
 end
 
+@testset "handling proprow" begin
+    df = DataFrame(x = [1, 1, 1, 2, 3, 3], id = 1:6)
+    gdf = groupby_checked(df, :x)
+
+    @test combine(gdf, proprow) == combine(proprow, gdf) ==
+          rename(combine(gdf, proprow => :a), :a => :proprow) ==
+          DataFrame(x = [1, 2, 3], proprow = [1/2, 1/6, 1/3])
+    @test transform(gdf, proprow) == transform(proprow, gdf) ==
+          rename(transform(gdf, proprow => :a), :a => :proprow) ==
+          DataFrame(x = df.x, id = df.id, proprow = [1/2, 1/2, 1/2, 1/6, 1/3, 1/3])
+
+    gdf = gdf[[2, 1, 3]]
+    @test combine(gdf, proprow) == combine(proprow, gdf) ==
+          rename(combine(gdf, proprow => :a), :a => :proprow) ==
+          DataFrame(x = [2, 1, 3], proprow = [1/6, 1/2, 1/3])
+    # note that transform retains the original row order
+    @test transform(gdf, proprow) == transform(proprow, gdf) ==
+          rename(transform(gdf, proprow => :a), :a => :proprow) ==
+          DataFrame(x = df.x, id = df.id, proprow = [1/2, 1/2, 1/2, 1/6, 1/3, 1/3])
+
+    gdf = gdf[[3, 1]]
+    @test combine(gdf, proprow) == combine(proprow, gdf) ==
+          rename(combine(gdf, proprow => :a), :a => :proprow) ==
+          DataFrame(x = [3, 2], proprow = [2/3, 1/3])
+    @test combine(gdf, :id, proprow) ==
+          rename(combine(gdf, :id, proprow => :a), :a => :proprow) ==
+          DataFrame(x = [3, 3, 2], id = [5, 6, 4], proprow = [2/3, 2/3, 1/3])
+    @test_throws ArgumentError transform(gdf, proprow)
+
+    gdf = gdf[[]]
+    @test isequal_coltyped(combine(gdf, proprow), DataFrame(x=Int[], proprow=Float64[]))
+    @test_throws ArgumentError transform(gdf, proprow)
+end
+
+@testset "handling rownumber" begin
+    df = DataFrame(x = [1, 1, 1, 2, 3, 3], id = 1:6)
+    gdf = groupby_checked(df, :x)
+
+    @test combine(gdf, rownumber) == combine(rownumber, gdf) ==
+          rename(combine(gdf, rownumber => :a), :a => :rownumber) ==
+          DataFrame(x = [1, 1, 1, 2, 3, 3], rownumber = [1, 2, 3, 1, 1, 2])
+    @test transform(gdf, rownumber) == transform(rownumber, gdf) ==
+          rename(transform(gdf, rownumber => :a), :a => :rownumber) ==
+          DataFrame(x = df.x, id = df.id, rownumber = [1, 2, 3, 1, 1, 2])
+
+    gdf = gdf[[2, 1, 3]]
+    @test combine(gdf, rownumber) == combine(rownumber, gdf) ==
+          rename(combine(gdf, rownumber => :a), :a => :rownumber) ==
+          DataFrame(x = [2, 1, 1, 1, 3, 3], rownumber = [1, 1, 2, 3, 1, 2])
+    # note that transform retains the original row order
+    @test transform(gdf, rownumber) == transform(rownumber, gdf) ==
+          rename(transform(gdf, rownumber => :a), :a => :rownumber) ==
+          DataFrame(x = df.x, id = df.id, rownumber = [1, 2, 3, 1, 1, 2])
+
+    gdf = gdf[[3, 1]]
+    @test combine(gdf, rownumber) == combine(rownumber, gdf) ==
+          rename(combine(gdf, rownumber => :a), :a => :rownumber) ==
+          DataFrame(x = [3, 3, 2], rownumber = [1, 2, 1])
+    @test_throws ArgumentError transform(gdf, rownumber)
+
+    gdf = gdf[[]]
+    @test isequal_coltyped(combine(gdf, rownumber), DataFrame(x=Int[], rownumber=Int[]))
+    @test_throws ArgumentError transform(gdf, rownumber)
+
+end
+
 end # module

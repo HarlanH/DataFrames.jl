@@ -878,6 +878,58 @@ package provides interfaces similar to LINQ and [dplyr](https://dplyr.tidyverse.
 
 See the [Data manipulation frameworks](@ref) section for more information.
 
+#### Selecting rows with `filter` and `subset`
+
+We have seen above how to subset a `DataFrame` to several criteria, involving multiple columns,
+by supplying a logical vector to the first dimension.
+For instance, in the following we want to subset to all rows where `x > 2` and where `a == 'c'`:
+
+```jldoctest dataframe
+julia> df = DataFrame(x=1:4, y=["Alice", "Bob", "Claire", "Dylan"], a='a':'d')
+4×3 DataFrame
+ Row │ x      y       a    
+     │ Int64  String  Char 
+─────┼─────────────────────
+   1 │     1  Alice   a
+   2 │     2  Bob     b
+   3 │     3  Claire  c
+   4 │     4  Dylan   d
+
+julia> df[(df.x .> 2) .& (df.a .== 'c'), : ]
+1×3 DataFrame
+ Row │ x      y       a    
+     │ Int64  String  Char 
+─────┼─────────────────────
+   1 │     3  Claire  c
+```
+
+An alternative formulation, which notably saves on the need to use
+broadcasting syntax via `.` prefixes, uses [`filter`](@ref) or [`filter!`](@ref):
+
+```jldoctest dataframe
+julia> filter([:x, :a] => (x, a) -> x > 2 && a == 'c', df)
+1×3 DataFrame
+ Row │ x      y       a    
+     │ Int64  String  Char 
+─────┼─────────────────────
+   1 │     3  Claire  c
+```
+
+You can also use the [`subset`](@ref) or [`subset!`](@ref) functions that are more
+flexible. They use the same syntax as [`select`](@ref) that was discussed in
+the previous section). The requirement is that each column transformation
+must produce a vector of `Bool` and only the rows from the source data frame
+for which all transformations produce `true` are included in the result:
+
+```jldoctest dataframe
+julia> subset(df, :x => ByRow(>(2)), :a => ByRow(==('c')))
+1×3 DataFrame
+ Row │ x      y       a    
+     │ Int64  String  Char 
+─────┼─────────────────────
+   1 │     3  Claire  c
+```
+
 ### Summarizing Data
 
 The `describe` function returns a data frame summarizing the elementary statistics and information about each column:

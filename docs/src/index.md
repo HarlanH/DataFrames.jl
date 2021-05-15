@@ -5,14 +5,8 @@ Welcome to the DataFrames.jl documentation!
 This resource aims to teach you everything you need to know to get up and
 running with tabular data manipulation using the DataFrames.jl package.
 
-For more illustrations of DataFrames.jl usage, in particular in conjunction with
-other packages you can check-out the following resources
-(they are kept up to date with the released version of DataFrames.jl):
-* [Data Wrangling with DataFrames.jl Cheat Sheet](https://www.ahsmart.com/pub/data-wrangling-with-data-frames-jl-cheat-sheet/)
-* [DataFrames Tutorial using Jupyter Notebooks](https://github.com/bkamins/Julia-DataFrames-Tutorial/)
-* [Julia Academy DataFrames.jl tutorial](https://github.com/JuliaAcademy/DataFrames)
-* [JuliaCon 2019](https://github.com/bkamins/JuliaCon2019-DataFrames-Tutorial), [JuliaCon 2020](https://github.com/bkamins/JuliaCon2020-DataFrames-Tutorial), and [PyData Global 2020](https://github.com/bkamins/PyDataGlobal2020) tutorials
-* [DataFrames.jl showcase](https://github.com/bkamins/DataFrames-Showcase)
+For more illustrations of DataFrames.jl usage and how-to guides check out the
+[Gallery](Gallery) section of this manual.
 
 ## What is DataFrames.jl?
 

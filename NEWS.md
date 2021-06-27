@@ -11,6 +11,15 @@
 * correctly handle selectors of the form `:col => AsTable` and `:col => cols`
   by expanding a single column into multiple columns
   ([#2780](https://github.com/JuliaData/DataFrames.jl/pull/2780))
+* if `sdf` is a `SubDataFrame` created with `:` as a column selector then
+  `insertcols!`, `setindex!`, broadcasted assignment, `select!` and `transform!`
+  (also on `GroupedDataFrame` created from such a `SubDataFrame`)
+  works exactly the same like for parent `DataFrame` except that for
+  rows that are filtered-ou in `sdf`:
+  - new columns are created with `missing` values stored in these rows;
+  - assignment to existing columns retains values already stored in them in
+    these rows;
+  ([XXXX](https://github.com/JuliaData/DataFrames.jl/pull/XXXX))
 
 ## Bug fixes
 

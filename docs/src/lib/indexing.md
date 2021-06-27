@@ -119,6 +119,15 @@ In particular a description explicitly mentions if the assignment is *in-place*.
 Note that if a `setindex!` operation throws an error the target data frame may be partially changed
 so it is unsafe to use it afterwards (the column length correctness will be preserved).
 
+!!! note
+
+    The rules described below for `DataFrame` also apply to `SubDataFrame` if
+    it was created with `:` as column selector, except that for
+    rows that are filtered-ou in `sdf`:
+    - new columns are created with `missing` values stored in these rows,
+    - assignment to existing columns retains values already stored in them in
+      these rows.
+
 `setindex!` on `DataFrame`:
 * `df[row, col] = v` -> set value of `col` in row `row` to `v` in-place;
 * `df[CartesianIndex(row, col)] = v` -> the same as `df[row, col] = v`;
@@ -138,7 +147,7 @@ so it is unsafe to use it afterwards (the column length correctness will be pres
                        `v` must be an `AbstractMatrix` or an `AbstractDataFrame`
                        (in the latter case column names must match);
 
-`setindex!` on `SubDataFrame`:
+`setindex!` on `SubDataFrame` (not created with `:` as column selector):
 * `sdf[row, col] = v` -> set value of `col` in row `row` to `v` in-place;
 * `sdf[CartesianIndex(row, col)] = v` -> the same as `sdf[row, col] = v`;
 * `sdf[row, cols] = v` -> the same as `dfr = df[row, cols]; dfr[:] = v` in-place;
@@ -171,7 +180,6 @@ The following broadcasting rules apply to `AbstractDataFrame` objects:
 Note that if broadcasting assignment operation throws an error the target data frame may be partially changed
 so it is unsafe to use it afterwards (the column length correctness will be preserved).
 
-
 Broadcasting `DataFrameRow` is currently not allowed (which is consistent with `NamedTuple`).
 
 It is possible to assign a value to `AbstractDataFrame` and `DataFrameRow` objects using the `.=` operator.
@@ -181,6 +189,13 @@ In such an operation `AbstractDataFrame` is considered as two-dimensional and `D
 
     The rule above means that, similar to single-dimensional objects in Base (e.g. vectors),
     `DataFrameRow` is considered to be column-oriented.
+
+!!! note
+
+    The rules described below for `DataFrame` also apply to `SubDataFrame` if
+    it was created with `:` as column selector following the same approach
+    as for `setindex!`. In the list below when `sdf` is present it is assumed
+    to be created with column selector other than `:`.
 
 Additional rules:
 * in the `df[CartesianIndex(row, col)] .= v`, `df[row, col] .= v` syntaxes `v` is
